@@ -8,6 +8,8 @@ import java.io.ObjectInputStream;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.PrintWriter;
+import java.io.FileWriter;
+import java.io.FileNotFoundException;
 
 import java.util.Scanner;
 import java.util.PriorityQueue;
@@ -26,6 +28,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.MultipleOutputs;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 public class ParallelDijkstra {
     public static class PDMapper extends Mapper<Object, Text, IntWritable, IntWritable> {
@@ -71,11 +75,20 @@ public class ParallelDijkstra {
     public static class PDReducer extends Reducer<IntWritable, IntWritable, IntWritable, IntWritable> {
         private IntWritable result = new IntWritable();
         private int iter;
+        private MultipleOutputs<IntWritable, IntWritable> mos;
 
         @Override
         protected void setup(Context context) throws IOException, InterruptedException {
             Configuration conf = context.getConfiguration();
             this.iter = Integer.parseInt(conf.get("iter"));
+            mos = new MultipleOutputs<IntWritable, IntWritable>(context);
+        }
+
+        @Override
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+            if (mos != null) {
+                mos.close();
+            }
         }
 
         public void reduce(IntWritable key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
@@ -88,11 +101,11 @@ public class ParallelDijkstra {
                     minValue = minValue < val.get() ? minValue : val.get();
                 }
             }
-            if (flag) {
-                key = new IntWritable(-key.get());
-            }
             result.set(minValue);
-            context.write(key, result);
+            if (flag) {
+                mos.write("changed", key, result);
+            }
+            mos.write("distance", key, result);
         }
     }
 
@@ -126,6 +139,7 @@ public class ParallelDijkstra {
         int source = Integer.parseInt(args[2]);
         int numIters = Integer.parseInt(args[3]);
         int iter = 0;
+        int numNodes = 0;
         PDNodeWritable pivot;
 
         Configuration conf = new Configuration();
@@ -133,7 +147,7 @@ public class ParallelDijkstra {
         fs.mkdirs(new Path("/temp0"));
         FileStatus[] status = fs.listStatus(new Path(inputPath));
         ObjectOutputStream oos = new ObjectOutputStream(fs.create(new Path("/hash.out")));
-        PrintWriter pw = new PrintWriter(fs.create(new Path("/temp0/part-r-00000")));
+        PrintWriter pw = new PrintWriter(fs.create(new Path("/temp0/distance-m-00000")));
         for (FileStatus fstatus: status) {
             Scanner sc = new Scanner(fs.open(fstatus.getPath()));
             while (sc.hasNextLine()) {
@@ -146,6 +160,8 @@ public class ParallelDijkstra {
                 }
                 if (nodes.contains(src)) {
                     continue;
+                } else {
+                    numNodes += 1;
                 }
                 if (src == source) {
                     pw.println(src + " " + "0");
@@ -182,11 +198,39 @@ public class ParallelDijkstra {
             job.setReducerClass(PDReducer.class);
             job.setOutputKeyClass(IntWritable.class);
             job.setOutputValueClass(IntWritable.class);
-            FileInputFormat.addInputPath(job, new Path("/temp" + Integer.toString(iter) + "/part-r-00000"));
+            FileInputFormat.addInputPath(job, new Path("/temp" + Integer.toString(iter) + "/distance-m-00000"));
+            MultipleOutputs.addNamedOutput(job, "changed", TextOutputFormat.class, IntWritable.class, IntWritable.class);
+            MultipleOutputs.addNamedOutput(job, "distance", TextOutputFormat.class, IntWritable.class, IntWritable.class);
             FileOutputFormat.setOutputPath(job, new Path("/temp" + Integer.toString(iter + 1)));
             job.waitForCompletion(true);
             set.add(pivot.getNode());
             iter += 1;
+            if (set.size() >= numNodes) {
+                break;
+            }
+            try {
+                Scanner sc = new Scanner(fs.open(new Path("/temp" + Integer.toString(iter) + "/changed-m-00000")));
+                while (sc.hasNextLine()) {
+                    Scanner sc2 = new Scanner(sc.nextLine());
+                    heap.offer(new PDNodeWritable(sc2.nextInt(), sc2.nextInt()));
+                }
+            } catch (FileNotFoundException e) {
+
+            }
+
+            try {
+                FileWriter fw = new FileWriter("heapSize.txt", true);
+                fw.write(Integer.toString(iter) + " " + Integer.toString(heap.size()) + "\n");
+                fw.close();
+            } catch (IOException e) {
+
+            }
+
+            try {
+                fs.delete(new Path("/temp" + Integer.toString(iter - 1)), true);
+            } catch (IOException e) {
+                
+            }
         }
 
         Job job = Job.getInstance(conf, "Dijkstra");
@@ -195,7 +239,7 @@ public class ParallelDijkstra {
         job.setReducerClass(Reducer.class);
         job.setOutputKeyClass(IntWritable.class);
         job.setOutputValueClass(IntWritable.class);
-        FileInputFormat.addInputPath(job, new Path("/temp" + Integer.toString(iter) + "/part-r-00000"));
+        FileInputFormat.addInputPath(job, new Path("/temp" + Integer.toString(iter) + "/distance-m-00000"));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
     }
