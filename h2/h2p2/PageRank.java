@@ -63,6 +63,26 @@ public class PageRank {
         }
     }
 
+    public static class PGCombiner extends Reducer<IntWritable, DoubleWritable, IntWritable, DoubleWritable> {
+        private DoubleWritable result = new DoubleWritable();
+
+        public void reduce(IntWritable key, Iterable<DoubleWritable> values, Context context) throws IOException, InterruptedException {
+            double sum = 0;
+            boolean flag = false;
+            for (DoubleWritable val: values) {
+                if (val.get() < 0) {
+                    flag = true;
+                    sum = val.get();
+                    break;
+                } else {
+                    sum += val.get();
+                }
+            }
+            result.set(sum);
+            context.write(key, result);
+        }
+    }
+
     public static class PGReducer extends Reducer<IntWritable, DoubleWritable, IntWritable, DoubleWritable> {
         private DoubleWritable result = new DoubleWritable();
         private int iter;
@@ -167,7 +187,7 @@ public class PageRank {
             Job job = Job.getInstance(conf, "PageRank");
             job.setJarByClass(PageRank.class);
             job.setMapperClass(PGMapper.class);
-            job.setCombinerClass(PGReducer.class);
+            job.setCombinerClass(PGCombiner.class);
             job.setReducerClass(PGReducer.class);
             job.setOutputKeyClass(IntWritable.class);
             job.setOutputValueClass(DoubleWritable.class);
@@ -182,7 +202,7 @@ public class PageRank {
                 fs.delete(new Path("/temp" + Integer.toString(iter - 1)), true);
                 fs.delete(new Path("/temp" + Integer.toString(iter - 1)), true);
             } catch (IOException e) {
-                
+
             }
         }
         Job job = Job.getInstance(conf, "PageRank");

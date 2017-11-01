@@ -1,6 +1,7 @@
 package h2p2;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 
 import java.util.Scanner;
 
@@ -34,11 +35,15 @@ public class PRAdjust {
     }
     public static void main(FileSystem fs, int iter, int numNodes, double alpha) throws Exception {
         double missing = 0;
-        Scanner sc = new Scanner(fs.open(new Path("/temp" + Integer.toString(iter) + "/lost-m-00000")));
-        while (sc.hasNextLine()) {
-            Scanner sc2 = new Scanner(sc.nextLine());
-            int node = sc2.nextInt();
-            missing -= sc2.nextDouble();
+        try {
+            Scanner sc = new Scanner(fs.open(new Path("/temp" + Integer.toString(iter) + "/lost-r-00000")));
+            while (sc.hasNextLine()) {
+                Scanner sc2 = new Scanner(sc.nextLine());
+                int node = sc2.nextInt();
+                missing -= sc2.nextDouble();
+            }
+        } catch (FileNotFoundException e) {
+
         }
 
         Configuration conf = new Configuration();
@@ -51,8 +56,8 @@ public class PRAdjust {
         job.setReducerClass(Reducer.class);
         job.setOutputKeyClass(IntWritable.class);
         job.setOutputValueClass(DoubleWritable.class);
-        FileInputFormat.addInputPath(job, new Path("/temp" + Integer.toString(iter) + "/values-m-00000"));
-        FileOutputFormat.setOutputPath(job, new Path("/temp" + Integer.toString(iter) + "updated/part-r-00000"));
+        FileInputFormat.addInputPath(job, new Path("/temp" + Integer.toString(iter) + "/mass-r-00000"));
+        FileOutputFormat.setOutputPath(job, new Path("/temp" + Integer.toString(iter) + "updated"));
         job.waitForCompletion(true);
     }
 }
