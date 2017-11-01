@@ -12,6 +12,7 @@ import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.HashSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -139,6 +140,7 @@ public class PageRank {
 
     public static void main(String[] args) throws Exception {
         HashMap<Integer, LinkedList<Integer>> hash = new HashMap<Integer, LinkedList<Integer>>();
+        HashSet<Integer> set = new HashSet<Integer>();
         String inputPath = args[0];
         String outputPath = args[1];
         int n = Integer.parseInt(args[2]);
@@ -157,18 +159,24 @@ public class PageRank {
         for (FileStatus fstatus: status) {
             Scanner sc = new Scanner(fs.open(fstatus.getPath()));
             while (sc.hasNextLine()) {
-                numNodes += 1;
                 Scanner sc2 = new Scanner(sc.nextLine());
                 int src = sc2.nextInt();
                 int dest = sc2.nextInt();
                 if (!hash.containsKey(src)) {
-                    LinkedList list = new LinkedList();
+                    LinkedList<Integer> list = new LinkedList<Integer>();
                     list.add(dest);
                     hash.put(src, list);
                 } else {
                     hash.get(src).add(dest);
                 }
-                pw.println(src + " " + theta);
+                if (!set.contains(src)) {
+                    pw.println(src + " " + theta);
+                    set.add(src);
+                }
+                if (!set.contains(dest)) {
+                    pw.println(dest + " " + theta);
+                    set.add(dest);
+                }
             }
         }
 
@@ -176,6 +184,8 @@ public class PageRank {
         oos.close();
         pw.close();
         hash = null;
+        numNodes = set.size();
+        set = null;
         DistributedCache.addCacheFile(new Path("/hash.out").toUri(), conf);
         G = numNodes * theta;
 
