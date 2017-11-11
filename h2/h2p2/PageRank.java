@@ -180,16 +180,15 @@ public class PageRank {
                 }
             }
         }
+        oos.writeObject(hash);
+        oos.close();
+        hash = null;
+        numNodes = set.size();
         initialWeight = 1.0 / numNodes;
         for (int temp: set) {
             pw.println(temp + " " + initialWeight);
         }
-
-        oos.writeObject(hash);
-        oos.close();
         pw.close();
-        hash = null;
-        numNodes = set.size();
         set = null;
         DistributedCache.addCacheFile(new Path("/hash.out").toUri(), conf);
         // G = numNodes * theta;
@@ -213,6 +212,7 @@ public class PageRank {
             FileOutputFormat.setOutputPath(job, new Path("/temp" + Integer.toString(iter + 1)));
             job.waitForCompletion(true);
             iter += 1;
+            System.out.println("This is iteration " + iter);
             PRAdjust.main(fs, iter, numNodes, alpha);
             try {
                 fs.delete(new Path("/temp" + Integer.toString(iter - 1)), true);
@@ -230,5 +230,21 @@ public class PageRank {
         FileInputFormat.addInputPath(job, new Path("/temp" + Integer.toString(iter) + "updated/part-r-00000"));
         FileOutputFormat.setOutputPath(job, new Path(args[1]));
         System.exit(job.waitForCompletion(true) ? 0 : 1);
+    }
+}
+
+class PRNode {
+    private int node;
+    private double value;
+
+    public PRNode(int node, double value) {
+        this.node = node;
+        this.value = value;
+    }
+    public int getNode() {
+        return this.node;
+    }
+    public double getValue() {
+        return this.value;
     }
 }
