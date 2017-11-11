@@ -56,11 +56,13 @@ public class PageRank {
                 LinkedList<Integer> list = hash.get(node);
                 int size = list.size();
                 for (int dest: list) {
-                    context.write(new IntWritable(dest), new DoubleWritable((mass + 0.0) / size));
+                    context.write(new IntWritable(dest), new DoubleWritable(mass / size));
                 }
             } else {
-                context.write(new IntWritable(node), new DoubleWritable(-mass));
+                context.write(new IntWritable(node), new DoubleWritable(-1.0));
+                context.write(new IntWritable(node), new DoubleWritable(mass));
             }
+            context.write(new IntWritable(node), new DoubleWritable(0.0));
         }
     }
 
@@ -73,11 +75,12 @@ public class PageRank {
             for (DoubleWritable val: values) {
                 if (val.get() < 0) {
                     flag = true;
-                    sum = val.get();
-                    break;
                 } else {
                     sum += val.get();
                 }
+            }
+            if (flag) {
+                sum *= -1.0;
             }
             result.set(sum);
             context.write(key, result);
@@ -214,12 +217,14 @@ public class PageRank {
             iter += 1;
             System.out.println("This is iteration " + iter);
             PRAdjust.main(fs, iter, numNodes, alpha);
+            /*
             try {
                 fs.delete(new Path("/temp" + Integer.toString(iter - 1)), true);
                 fs.delete(new Path("/temp" + Integer.toString(iter - 1)), true);
             } catch (IOException e) {
 
             }
+            */
         }
         Job job = Job.getInstance(conf, "PageRank");
         job.setJarByClass(PageRank.class);
