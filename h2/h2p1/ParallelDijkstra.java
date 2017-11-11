@@ -142,8 +142,8 @@ public class ParallelDijkstra {
 
     public static void main(String[] args) throws Exception {
         Hash hash = new Hash();
-        PriorityQueue<PDNodeWritable> heap = new PriorityQueue<PDNodeWritable>(new Comparator<PDNodeWritable>() {
-            public int compare(PDNodeWritable n1, PDNodeWritable n2) {
+        PriorityQueue<PDNode> heap = new PriorityQueue<PDNode>(new Comparator<PDNode>() {
+            public int compare(PDNode n1, PDNode n2) {
                 if (n1.getDist() < n2.getDist()) {
                     return -1;
                 } else if (n1.getDist() > n2.getDist()) {
@@ -160,7 +160,7 @@ public class ParallelDijkstra {
         int numIters = Integer.parseInt(args[3]);
         int iter = 0;
         int numNodes = 0;
-        PDNodeWritable pivot;
+        PDNode pivot;
 
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
@@ -178,21 +178,31 @@ public class ParallelDijkstra {
                 if (!hash.containsKey(src, dest) || weight < hash.get(src, dest)) {
                     hash.put(src, dest, weight);
                 }
-                if (nodes.contains(src)) {
-                    continue;
-                } else {
+                if (!nodes.contains(src)) {
                     numNodes += 1;
+                    if (src == source) {
+                        pw.println(src + " " + "0");
+                        heap.offer(new PDNode(src, 0));
+                    } else {
+                        pw.println(src + " " + Integer.MAX_VALUE);
+                        heap.offer(new PDNode(src, Integer.MAX_VALUE));
+                    }
+                    nodes.add(src);
                 }
-                if (src == source) {
-                    pw.println(src + " " + "0");
-                    heap.offer(new PDNodeWritable(src, 0));
-                } else {
-                    pw.println(src + " " + Integer.MAX_VALUE);
-                    heap.offer(new PDNodeWritable(src, Integer.MAX_VALUE));
+                if (!nodes.contains(dest)) {
+                    numNodes += 1;
+                    if (dest == source) {
+                        pw.println(dest + " " + "0");
+                        heap.offer(new PDNode(dest, 0));
+                    } else {
+                        pw.println(dest + " " + Integer.MAX_VALUE);
+                        heap.offer(new PDNode(dest, Integer.MAX_VALUE));
+                    }
+                    nodes.add(dest);
                 }
-                nodes.add(src);
             }
         }
+
         oos.writeObject(hash);
         oos.close();
         pw.close();
@@ -232,7 +242,7 @@ public class ParallelDijkstra {
                 Scanner sc = new Scanner(fs.open(new Path("/temp" + Integer.toString(iter) + "/changed-r-00000")));
                 while (sc.hasNextLine()) {
                     Scanner sc2 = new Scanner(sc.nextLine());
-                    heap.offer(new PDNodeWritable(sc2.nextInt(), sc2.nextInt()));
+                    heap.offer(new PDNode(sc2.nextInt(), sc2.nextInt()));
                 }
             } catch (FileNotFoundException e) {
 
@@ -265,3 +275,19 @@ public class ParallelDijkstra {
     }
 }
 
+
+class PDNode {
+    private int node;
+    private int dist;
+
+    public PDNode(int node, int dist) {
+        this.node = node;
+        this.dist = dist;
+    }
+    public int getNode() {
+        return this.node;
+    }
+    public int getDist() {
+        return this.dist;
+    }
+}

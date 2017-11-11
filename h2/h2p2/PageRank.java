@@ -149,6 +149,7 @@ public class PageRank {
         int numNodes = 0;
         int iter = 0;
         double G;
+        double initialWeight;
 
         Configuration conf = new Configuration();
         FileSystem fs = FileSystem.get(conf);
@@ -170,14 +171,18 @@ public class PageRank {
                     hash.get(src).add(dest);
                 }
                 if (!set.contains(src)) {
-                    pw.println(src + " " + theta);
+                    // pw.println(src + " " + theta);
                     set.add(src);
                 }
                 if (!set.contains(dest)) {
-                    pw.println(dest + " " + theta);
+                    // pw.println(dest + " " + theta);
                     set.add(dest);
                 }
             }
+        }
+        initialWeight = 1.0 / numNodes;
+        for (int temp: set) {
+            pw.println(temp + " " + initialWeight);
         }
 
         oos.writeObject(hash);
@@ -187,7 +192,8 @@ public class PageRank {
         numNodes = set.size();
         set = null;
         DistributedCache.addCacheFile(new Path("/hash.out").toUri(), conf);
-        G = numNodes * theta;
+        // G = numNodes * theta;
+        G = 1.0;
 
         while (iter < n) {
             conf.set("numNodes", Integer.toString(numNodes));
