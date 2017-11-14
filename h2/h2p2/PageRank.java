@@ -80,7 +80,7 @@ public class PageRank {
                 }
             }
             if (flag) {
-                sum *= -1.0;
+                context.write(key, new DoubleWritable(-1.0));
             }
             result.set(sum);
             context.write(key, result);
@@ -113,11 +113,12 @@ public class PageRank {
             for (DoubleWritable val: values) {
                 if (val.get() < 0) {
                     flag = true;
-                    sum = val.get();
-                    break;
                 } else {
                     sum += val.get();
                 }
+            }
+            if (flag) {
+                sum *= -1;
             }
             result.set(sum);
             if (flag) {
