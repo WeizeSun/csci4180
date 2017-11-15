@@ -13,8 +13,8 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-public class PDPreProcess {
-    public static class PDMapper extends Mapper<Object, Text, IntWritable, Text> {
+public class PRPreProcess {
+    public static class PRMapper extends Mapper<Object, Text, IntWritable, Text> {
         private IntWritable dest = new IntWritable();
         private Text result = new Text();
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
@@ -28,7 +28,7 @@ public class PDPreProcess {
         }
     }
 
-    public static class PDReducer extends Reducer<IntWritable, Text, IntWritable, Text> {
+    public static class PRReducer extends Reducer<IntWritable, Text, IntWritable, Text> {
         private Text result = new Text();
         public void reduce(IntWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             StringBuilder sb = new StringBuilder();
@@ -42,11 +42,11 @@ public class PDPreProcess {
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
-        Job job = Job.getInstance(conf, "PDPreProcess");
-        job.setJarByClass(PDPreProcess.class);
-        job.setMapperClass(PDMapper.class);
-        job.setCombinerClass(PDReducer.class);
-        job.setReducerClass(PDReducer.class);
+        Job job = Job.getInstance(conf, "PRPreProcess");
+        job.setJarByClass(PRPreProcess.class);
+        job.setMapperClass(PRMapper.class);
+        job.setCombinerClass(PRReducer.class);
+        job.setReducerClass(PRReducer.class);
         job.setOutputKeyClass(IntWritable.class);
         job.setOutputValueClass(Text.class);
         FileInputFormat.addInputPath(job, new Path(args[0]));

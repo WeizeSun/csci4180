@@ -59,8 +59,7 @@ public class PageRank {
                     context.write(new IntWritable(dest), new DoubleWritable(mass / size));
                 }
             } else {
-                context.write(new IntWritable(node), new DoubleWritable(-1.0));
-                context.write(new IntWritable(node), new DoubleWritable(mass));
+                context.write(new IntWritable(node), new DoubleWritable(-mass));
             }
             context.write(new IntWritable(node), new DoubleWritable(0.0));
         }
@@ -71,16 +70,12 @@ public class PageRank {
 
         public void reduce(IntWritable key, Iterable<DoubleWritable> values, Context context) throws IOException, InterruptedException {
             double sum = 0;
-            boolean flag = false;
             for (DoubleWritable val: values) {
                 if (val.get() < 0) {
-                    flag = true;
+                    context.write(key, val);
                 } else {
                     sum += val.get();
                 }
-            }
-            if (flag) {
-                context.write(key, new DoubleWritable(-1.0));
             }
             result.set(sum);
             context.write(key, result);
@@ -109,21 +104,14 @@ public class PageRank {
 
         public void reduce(IntWritable key, Iterable<DoubleWritable> values, Context context) throws IOException, InterruptedException {
             double sum = 0;
-            boolean flag = false;
             for (DoubleWritable val: values) {
                 if (val.get() < 0) {
-                    flag = true;
+                    mos.write("lost", key, val);
                 } else {
                     sum += val.get();
                 }
             }
-            if (flag) {
-                sum *= -1;
-            }
             result.set(sum);
-            if (flag) {
-                mos.write("lost", key, result);
-            }
             mos.write("mass", key, result);
         }
     }
@@ -175,11 +163,9 @@ public class PageRank {
                     hash.get(src).add(dest);
                 }
                 if (!set.contains(src)) {
-                    // pw.println(src + " " + theta);
                     set.add(src);
                 }
                 if (!set.contains(dest)) {
-                    // pw.println(dest + " " + theta);
                     set.add(dest);
                 }
             }
@@ -195,7 +181,6 @@ public class PageRank {
         pw.close();
         set = null;
         DistributedCache.addCacheFile(new Path("/hash.out").toUri(), conf);
-        // G = numNodes * theta;
         G = 1.0;
 
         while (iter < n) {
@@ -218,15 +203,8 @@ public class PageRank {
             iter += 1;
             System.out.println("This is iteration " + iter);
             PRAdjust.main(fs, iter, numNodes, alpha);
-            /*
-            try {
-                fs.delete(new Path("/temp" + Integer.toString(iter - 1)), true);
-                fs.delete(new Path("/temp" + Integer.toString(iter - 1)), true);
-            } catch (IOException e) {
-
-            }
-            */
         }
+
         Job job = Job.getInstance(conf, "PageRank");
         job.setJarByClass(PageRank.class);
         job.setMapperClass(FinalMapper.class);
@@ -239,18 +217,3 @@ public class PageRank {
     }
 }
 
-class PRNode {
-    private int node;
-    private double value;
-
-    public PRNode(int node, double value) {
-        this.node = node;
-        this.value = value;
-    }
-    public int getNode() {
-        return this.node;
-    }
-    public double getValue() {
-        return this.value;
-    }
-}

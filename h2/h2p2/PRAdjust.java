@@ -30,7 +30,7 @@ public class PRAdjust {
             Scanner sc = new Scanner(value.toString());
             int node = sc.nextInt();
             double mass = sc.nextDouble();
-            context.write(new IntWritable(node), new DoubleWritable(alpha / numNodes + (1 - alpha) * (missing + Math.max(mass, 0))));
+            context.write(new IntWritable(node), new DoubleWritable(alpha / numNodes + (1 - alpha) * (missing + mass)));
         }
     }
     public static void main(FileSystem fs, int iter, int numNodes, double alpha) throws Exception {
