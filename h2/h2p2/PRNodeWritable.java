@@ -10,7 +10,7 @@ import java.util.HashMap;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.IntWritable;
 
-public class PRNodeWritable implements Writable {
+public class PRNodeWritable {
     private int node;
     private double value;
 
@@ -18,6 +18,7 @@ public class PRNodeWritable implements Writable {
         this.node = node;
         this.value = value;
     }
+    /*
     public void write(DataOutput out) throws IOException {
         out.writeInt(node);
         out.writeDouble(value);
@@ -26,6 +27,7 @@ public class PRNodeWritable implements Writable {
         node = in.readInt();
         value = in.readDouble();
     }
+    */
     public int getNode() {
         return this.node;
     }

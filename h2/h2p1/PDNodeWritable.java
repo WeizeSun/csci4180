@@ -10,7 +10,7 @@ import java.util.HashMap;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.IntWritable;
 
-public class PDNodeWritable implements Writable {
+public class PDNodeWritable {
     private int node;
     private int dist;
 
@@ -18,6 +18,7 @@ public class PDNodeWritable implements Writable {
         this.node = node;
         this.dist = dist;
     }
+    /*
     public void write(DataOutput out) throws IOException {
         out.writeInt(node);
         out.writeInt(dist);
@@ -26,6 +27,7 @@ public class PDNodeWritable implements Writable {
         node = in.readInt();
         dist = in.readInt();
     }
+    */
     public int getNode() {
         return this.node;
     }
